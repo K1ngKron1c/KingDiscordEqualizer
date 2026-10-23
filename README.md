@@ -50,6 +50,14 @@ If `RYTHM_TEXT_CHANNEL_ID` is blank, live Rythm messages from any server channel
 
 ## Run
 
+### Show member roles on the website
+
+1. In the Discord Developer Portal, select your application, open **Bot**, and enable **Server Members Intent** and **Presence Intent**. Keep Message Content Intent enabled.
+2. Add `DISCORD_MEMBER_ROLES=true` to `.env` (or to the service environment in Render).
+3. Restart/redeploy the bot. Look for `Website member roles loaded.` in its logs.
+
+This mode uses the bot's online member list, with role badges in Discord hierarchy order, excluding `@everyone`. The server owner appears first when online, followed by each member's highest role with **Display role members separately from online members** enabled, in server role order. Members within each group are alphabetized; ungrouped members come last. For Friends above Bots, arrange those displayed roles in that order in Discord. It displays up to seven online members and makes their role names visible to website visitors. Offline/invisible members are excluded. The public Server Widget setting is not required in this mode. The join button uses the server's vanity invite when available; otherwise it is hidden. Remove the environment setting to restore the public widget.
+
 Double-click `start.bat`. The first run installs dependencies. Then open:
 
 http://localhost:3000
@@ -70,6 +78,7 @@ The Blueprint supplies the build command, start command, health check, free plan
 
 ## Troubleshooting
 
+- **Discord members do not show on the website:** in your Discord server, open **Server Settings → Widget**, turn on **Enable Server Widget**, and save. The website uses this public widget for its online member list; it does not list every server member. Refresh the website after saving. Discord error `50004` means the widget is disabled.
 - **Bot joins but bars do not move:** confirm `RYTHM_USER_ID` is Rythm's actual account ID, not an application ID, and that Rythm is producing audio.
 - **Song stays on “Waiting for Rythm”:** enable **Message Content Intent**, confirm the Rythm user ID, and set `RYTHM_TEXT_CHANNEL_ID` if Rythm posts outside the voice-channel chat. Then make Rythm start or change a song so it sends a fresh message.
 - **Bot cannot join:** move the bot role above channel permission overrides or explicitly grant View Channel and Connect.

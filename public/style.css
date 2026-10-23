@@ -19,7 +19,7 @@ body {
   isolation: isolate;
   background:
     linear-gradient(180deg, rgba(2, 4, 10, .35), rgba(35, 0, 7, .45) 55%, rgba(0, 0, 0, .72)),
-    url("assets/tokyo-red-city.jpg") center center / cover no-repeat fixed;
+    url("assets/purple-paris-moon.png") center center / cover no-repeat fixed;
 }
 
 body::before {
@@ -491,7 +491,7 @@ p {
 .discord-members {
   flex: 1;
   min-height: 0;
-  overflow: hidden;
+  overflow-y: auto;
   padding: 2px 12px 8px;
 }
 
@@ -515,12 +515,27 @@ p {
 }
 
 .discord-member:hover { background: rgba(224,0,24,.1); }
+.discord-member-details { min-width: 0; }
+.discord-member-details > span { display: block; }
+.discord-member-roles { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.discord-member-roles .discord-role {
+  --role-color: #b9aeb0;
+  max-width: 100%;
+  padding: 2px 6px;
+  border: 1px solid var(--role-color);
+  border-radius: 8px;
+  color: #f4edef;
+  background: #24171b;
+  font-size: 10px;
+  line-height: 1.4;
+}
+.discord-role::before { content: ''; display: inline-block; width: 6px; height: 6px; margin-right: 4px; border-radius: 50%; background: var(--role-color); }
 .discord-member img { width: 30px; height: 30px; border: 1px solid rgba(255,255,255,.14); border-radius: 50%; }
 .discord-member span { overflow: hidden; color: #e9dfe0; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
 .member-status { width: 8px; height: 8px; border-radius: 50%; background: #777; }
-.status-online { background: #ed1b36; box-shadow: 0 0 7px #ed1b36; }
+.status-online { background: #17F619; box-shadow: 0 0 7px #17F619; }
 .status-idle { background: #ff9c2a; }
-.status-dnd { background: #a9001a; }
+.status-dnd { background: #ed1b36; }
 
 .discord-join {
   display: block;

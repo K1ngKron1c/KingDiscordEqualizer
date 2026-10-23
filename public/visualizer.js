@@ -326,8 +326,13 @@ songTitle.addEventListener('click', async event => {
 async function updateDiscordWidget() {
   try {
     const response = await fetch('/api/discord-widget');
-    if (!response.ok) throw new Error('Widget unavailable');
     const widget = await response.json();
+    if (!response.ok) {
+      throw new Error(widget.code === 'WIDGET_DISABLED'
+        ? 'Enable Server Widget in Discord Server Settings → Widget to show members.'
+        : widget.code === 'MEMBERS_LOADING' ? 'Discord members are loading. Check the bot settings if this continues.'
+        : 'Discord server status unavailable.');
+    }
     discordServerName.textContent = widget.name || "King's Castle";
     discordOnlineCount.textContent = widget.presenceCount ?? 0;
     discordMembers.replaceChildren();
@@ -339,9 +344,27 @@ async function updateDiscordWidget() {
       avatar.alt = '';
       const name = document.createElement('span');
       name.textContent = member.username;
+      const details = document.createElement('div');
+      details.className = 'discord-member-details';
+      details.append(name);
+      if (member.roles?.length) {
+        const roles = document.createElement('div');
+        roles.className = 'discord-member-roles';
+        for (const role of member.roles) {
+          const badge = document.createElement('span');
+          badge.className = 'discord-role';
+          badge.textContent = role.name;
+          badge.title = role.name;
+          if (/^#[0-9a-f]{6}$/i.test(role.color) && role.color !== '#000000') {
+            badge.style.setProperty('--role-color', role.color);
+          }
+          roles.append(badge);
+        }
+        details.append(roles);
+      }
       const statusDot = document.createElement('i');
       statusDot.className = `member-status status-${member.status || 'offline'}`;
-      row.append(avatar, name, statusDot);
+      row.append(avatar, details, statusDot);
       discordMembers.append(row);
     }
     if (!discordMembers.children.length) {
@@ -355,10 +378,15 @@ async function updateDiscordWidget() {
     } else {
       discordJoin.hidden = true;
     }
-  } catch {
+  } catch (failure) {
+    discordOnlineCount.textContent = '—';
+    discordJoin.hidden = true;
     discordMembers.replaceChildren();
     const error = document.createElement('p');
-    error.textContent = 'Discord server status unavailable.';
+    error.textContent = ['Enable Server Widget in Discord Server Settings → Widget to show members.',
+      'Discord members are loading. Check the bot settings if this continues.'].includes(failure.message)
+      ? failure.message
+      : 'Discord server status unavailable.';
     discordMembers.append(error);
   }
 }

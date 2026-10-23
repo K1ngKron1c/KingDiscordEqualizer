@@ -1,3 +1,4 @@
+import './logger.js';
 import 'dotenv/config';
 import http from 'node:http';
 import path from 'node:path';
@@ -6,14 +7,16 @@ import express from 'express';
 import { WebSocketServer, WebSocket } from 'ws';
 import FFT from 'fft-js';
 import OpusScript from 'opusscript';
-import {
+import { buildMemberWidget } from './member-widget.js';
+import Discord from 'discord.js';
+const {
   Client,
   GatewayIntentBits,
   MessageFlags,
   Partials,
   SlashCommandBuilder,
   PermissionFlagsBits,
-} from 'discord.js';
+} = Discord;
 import {
   EndBehaviorType,
   VoiceConnectionStatus,
@@ -44,15 +47,37 @@ for (const [key, value] of Object.entries(config)) {
 }
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const memberRolesEnabled = process.env.DISCORD_MEMBER_ROLES === 'true';
+let memberWidgetReady = false;
 const app = express();
 app.use(express.static(path.join(__dirname, '..', 'public')));
 app.get('/health', (_req, res) => res.json({ ok: true, listening: analyzer.active }));
 let widgetCache = { data: null, updatedAt: 0 };
 app.get('/api/discord-widget', async (_req, res) => {
+  if (memberRolesEnabled) {
+    const guild = client.guilds.cache.get(config.guildId);
+    if (!client.isReady() || !memberWidgetReady || !guild) {
+      return res.status(503).json({ code: 'MEMBERS_LOADING', error: 'Discord members are loading. If this continues, check the bot logs and member/presence intents.' });
+    }
+    return res.json({ ...buildMemberWidget(guild), instantInvite: guild.vanityURLCode
+      ? `https://discord.gg/${guild.vanityURLCode}` : null });
+  }
   try {
     if (!widgetCache.data || Date.now() - widgetCache.updatedAt > 30_000) {
-      const response = await fetch(`https://discord.com/api/v10/guilds/${config.guildId}/widget.json`);
-      if (!response.ok) throw new Error(`Discord widget request failed (${response.status}).`);
+      const response = await fetch(`https://discord.com/api/v10/guilds/${config.guildId}/widget.json`, {
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!response.ok) {
+        const failure = await response.json().catch(() => ({}));
+        if (failure.code === 50004) {
+          widgetCache = { data: null, updatedAt: 0 };
+          return res.status(503).json({
+            error: 'Enable Server Widget in Discord Server Settings → Widget to show members.',
+            code: 'WIDGET_DISABLED',
+          });
+        }
+        throw new Error(`Discord widget request failed (${response.status}).`);
+      }
       const widget = await response.json();
       widgetCache = {
         updatedAt: Date.now(),
@@ -309,6 +334,7 @@ const client = new Client({
     GatewayIntentBits.GuildVoiceStates,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
+    ...(memberRolesEnabled ? [GatewayIntentBits.GuildMembers, GatewayIntentBits.GuildPresences] : []),
   ],
   partials: [Partials.Channel, Partials.Message],
 });
@@ -316,6 +342,15 @@ const client = new Client({
 client.once('clientReady', async readyClient => {
   console.log(`Logged in as ${readyClient.user.tag}`);
   const guild = await readyClient.guilds.fetch(config.guildId);
+  if (memberRolesEnabled) {
+    try {
+      await guild.members.fetch({ withPresences: true, time: 30_000 });
+      memberWidgetReady = true;
+      console.log('Website member roles loaded.');
+    } catch (error) {
+      console.error(`Website member roles failed to load: ${error.message}. Check Server Members Intent and Presence Intent, then restart.`);
+    }
+  }
   await guild.commands.set(commands);
   console.log(`Commands registered. Display: http://localhost:${config.port}`);
   await seedTrackFromRecentMessages(guild);
