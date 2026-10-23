@@ -23,7 +23,7 @@ A Discord bot that joins a voice channel, listens only to Rythm's incoming audio
 
 ## Configure
 
-1. Copy `.env.example` and rename the copy to `.env`.
+1. Find `.env.example` and rename it to `.env`.
 2. Fill in:
 
 ```env
